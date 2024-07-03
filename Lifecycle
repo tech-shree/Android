@@ -1,0 +1,68 @@
+package com.example.tanushreeandroid
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.tanushreeandroid.ui.theme.TanushreeAndroidTheme
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            TanushreeAndroidTheme {
+                // A surface container using the 'background' color from the theme
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    Greeting("Android")
+                }
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        println("LifeCycle:- On Start Started")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        println("LifeCycle:- On Resume Started")
+    }
+
+    override fun onPause() {
+        super.onPause()
+        println("LifeCycle:- On Pause Called")
+    }
+
+    override fun onStop() {
+        super.onStop()
+        println("LifeCycle:- On Stop Called")
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        println("LifeCycle:- On Destroy Started")
+    }
+}
+
+@Composable
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+    Text(
+            text = "hi $name!",
+            modifier = modifier
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun GreetingPreview() {
+    TanushreeAndroidTheme {
+        Greeting("Android")
+    }
+}
