@@ -1,0 +1,161 @@
+/*import android.app.Activity
+import android.content.ContentValues.TAG
+import android.os.Bundle
+import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+//import androidx.activity.compose.setContent
+//import androidx.activity.contextaware.withContextAvailable
+import androidx.compose.foundation.layout.*
+//import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+//import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+//import androidx.compose.ui.draw.clip
+//import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+//import androidx.compose.ui.text.input.PasswordVisualTransformation
+//import androidx.compose.ui.unit.dp
+import com.example.firebaseintegrity.ui.theme.FirebaseIntegrityTheme
+import com.google.firebase.Firebase
+//import com.google.firebase.FirebaseException
+//import com.google.firebase.FirebaseTooManyRequestsException
+//import com.google.firebase.auth.*
+//import com.google.firebase.auth.PhoneAuthProvider.*
+import com.google.firebase.firestore.firestore
+//import java.util.concurrent.TimeUnit
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            FirebaseIntegrityTheme {
+                loginScreen()
+            }
+        }
+    }
+
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private var storedVerificationId: String? = null
+    private lateinit var resendToken: ForceResendingToken
+
+    private val callbacks = object : OnVerificationStateChangedCallbacks() {
+
+        override fun onVerificationCompleted(credential: PhoneAuthCredential) {
+            Log.d(TAG, "onVerificationCompleted:$credential")
+            signInWithPhoneAuthCredential(credential, this@MainActivity)
+        }
+
+        override fun onVerificationFailed(e: FirebaseException) {
+            Log.w(TAG, "onVerificationFailed", e)
+            when (e) {
+                is FirebaseAuthInvalidCredentialsException -> {
+                    Log.e(TAG, "Invalid request: ${e.message}")
+                }
+                is FirebaseTooManyRequestsException -> {
+                    Log.e(TAG, "SMS quota exceeded: ${e.message}")
+                }
+                is FirebaseAuthMissingActivityForRecaptchaException -> {
+                    Log.e(TAG, "reCAPTCHA verification attempted with null Activity: ${e.message}")
+                }
+                else -> {
+                    Log.e(TAG, "Verification failed: ${e.message}")
+                }
+            }
+        }
+
+        override fun onCodeSent(verificationId: String, token: ForceResendingToken) {
+            Log.d(TAG, "onCodeSent:$verificationId")
+            storedVerificationId = verificationId
+            resendToken = token
+        }
+    }
+
+    private fun startPhoneNumberVerification(phoneNumber: String, activity: Activity) {
+        val options = PhoneAuthOptions.newBuilder(auth)
+            .setPhoneNumber(phoneNumber)
+            .setTimeout(60L, TimeUnit.SECONDS)
+            .setActivity(activity)
+            .setCallbacks(callbacks)
+            .build()
+        PhoneAuthProvider.verifyPhoneNumber(options)
+    }
+
+    private fun verifyOTP(otp: String, activity: Activity) {
+        val verificationId = storedVerificationId
+        if (verificationId != null) {
+            val credential = PhoneAuthProvider.getCredential(verificationId, otp)
+            signInWithPhoneAuthCredential(credential, activity)
+        } else {
+            Log.e(TAG, "Verification ID is null")
+        }
+    }
+
+    private fun signInWithPhoneAuthCredential(credential: PhoneAuthCredential, activity: Activity) {
+        auth.signInWithCredential(credential)
+            .addOnCompleteListener(activity) { task ->
+                if (task.isSuccessful) {
+                    Log.d(TAG, "signInWithCredential:success")
+                    val user = task.result?.user
+                    Log.d(TAG, "User: ${user?.uid}")
+                } else {
+                    Log.w(TAG, "signInWithCredential:failure", task.exception)
+                    if (task.exception is FirebaseAuthInvalidCredentialsException) {
+                        Log.e(TAG, "Invalid verification code")
+                    }
+                }
+            }
+    }
+
+    @Composable
+    fun loginScreen() {
+        var phoneNumber by remember { mutableStateOf("") }
+        var otp by remember { mutableStateOf("") }
+        val activity = LocalContext.current as Activity
+
+        Scaffold { innerPadding ->
+            Column(modifier = Modifier.padding(innerPadding)) {
+                Card(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp)
+                    ) {
+                        TextField(
+                            value = phoneNumber,
+                            onValueChange = { phoneNumber = it },
+                            label = { Text("Phone Number") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(CircleShape)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = { startPhoneNumberVerification(phoneNumber, activity) }) {
+                            Text("Send OTP")
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        TextField(
+                            value = otp,
+                            onValueChange = { otp = it },
+                            label = { Text("Enter OTP") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(CircleShape),
+                            visualTransformation = PasswordVisualTransformation()
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = { verifyOTP(otp, activity) }) {
+                            Text("Validate OTP")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
